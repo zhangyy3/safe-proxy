@@ -31,10 +31,12 @@ public class ServerSocketProxy {
             Socket socket = serverSocket.accept();
             SocketThreadPool.submit(new SocketProxyImpl(socket));
         }
-        SocketThreadPool.shutdown();
+        destroy();
+
     }
 
     public void destroy() throws IOException {
         serverSocket.close();
+        SocketThreadPool.shutdown();
     }
 }

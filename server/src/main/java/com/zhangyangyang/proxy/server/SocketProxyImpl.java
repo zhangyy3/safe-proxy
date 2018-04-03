@@ -3,6 +3,8 @@ package com.zhangyangyang.proxy.server;
 import com.zhangyangyang.proxy.EncryptException;
 import com.zhangyangyang.proxy.common.ResCode;
 import com.zhangyangyang.proxy.common.SocketProxy;
+import com.zhangyangyang.proxy.data.UserBean;
+import com.zhangyangyang.proxy.data.UserDB;
 import com.zhangyangyang.proxy.util.AES;
 
 import org.apache.logging.log4j.LogManager;
@@ -21,8 +23,7 @@ public class SocketProxyImpl extends SocketProxy {
 
     private static final Logger LOGGER = LogManager.getLogger(SocketProxyImpl.class);
 
-    private String name;
-    private String password;
+    private UserBean userBean;
 
     public SocketProxyImpl(Socket inSocket) {
         super(inSocket);
@@ -35,27 +36,37 @@ public class SocketProxyImpl extends SocketProxy {
         ServerRequestHeader header = buildRequestHeader(inSocketInputStream);
         ServerResponseHeader response = validRequest(header);
         if (response.isSuccess()) {
-            name = header.getName();
-            password = header.getPassword();
+            userBean = UserDB.getUserByName(header.getName());
         }
         inSocket.getOutputStream().write(response.getStatus());
         inSocket.getOutputStream().flush();
-        // todo real handle request info
+        // listen client request
+        listenClientRequest(inSocketInputStream);
+        // bridge destination server
+
+    }
+
+    private void listenClientRequest(InputStream in) {
+        int n;
+        byte[] bytes = new byte[2048];
+        // TODO: 2018/4/3
     }
 
 
     private ServerResponseHeader validRequest(ServerRequestHeader header) {
+
         ServerResponseHeader response = new ServerResponseHeader();
 
-        if (!valadPass(header.getName(), header.getPassword())) {
+        if (!validPass(header.getName(), header.getPassword())) {
             response.setStatus(ResCode.INVALID_PASSWORD);
             response.setMsg("验证失败");
             return response;
         }
 
         try {
-            String host = new String(AES.decrypt(password + name, header.getHost().getBytes()));
-            int port = Integer.parseInt(new String(AES.decrypt(password + name, header.getPort().getBytes())));
+            String secret = userBean.getName() + new String(userBean.getPassword());
+            String host = new String(AES.decrypt(secret, header.getHost().getBytes()));
+            int port = Integer.parseInt(new String(AES.decrypt(secret, header.getPort().getBytes())));
             response.setPort(port);
             response.setHost(host);
             response.setStatus(ResCode.SUCCESS);
@@ -70,8 +81,20 @@ public class SocketProxyImpl extends SocketProxy {
     }
 
     // now not valid the pass , just return ture
-    private boolean valadPass(String name, String password) {
-        // TODO: 2018/4/2 valid password and name
+    private boolean validPass(String name, String password) {
+        UserBean bean = UserDB.getUserByName(name);
+        if (null == bean) {
+            LOGGER.info("user:{} 不存在", name);
+            return false;
+        }
+        if (!bean.validPassword(password)) {
+            LOGGER.info("user:{}, 传入的密码:{}不正确", name, password);
+            return false;
+        }
+        if (!bean.validExpire()) {
+            LOGGER.info("user:{}, 已过期", name);
+            return false;
+        }
         return true;
     }
 

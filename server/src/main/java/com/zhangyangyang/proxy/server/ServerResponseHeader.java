@@ -4,6 +4,7 @@ import com.zhangyangyang.proxy.common.ResCode;
 
 /**
  * Created by zhangyangyang on 2018/3/28.
+ * @see ServerRequestHeader
  */
 public class ServerResponseHeader {
     private int status;
