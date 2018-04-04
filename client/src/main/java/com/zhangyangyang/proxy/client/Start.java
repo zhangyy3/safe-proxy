@@ -1,6 +1,7 @@
 package com.zhangyangyang.proxy.client;
 
 import com.zhangyangyang.proxy.common.SocketThreadPool;
+import com.zhangyangyang.proxy.util.MD5;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,7 +29,7 @@ public class Start {
             while (!serverSocket.isClosed()) {
                 Socket socket = serverSocket.accept();
                 LOGGER.info("port:{}", socket.getPort());
-                SocketThreadPool.submit(new SocketProxy(socket, args[1], args[2]));
+                SocketThreadPool.submit(new SocketProxy(socket, args[1], MD5.md5(args[2])));
             }
         } catch (Exception e) {
             LOGGER.error("start server failed", e);
