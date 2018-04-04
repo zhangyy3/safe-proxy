@@ -1,8 +1,11 @@
 package com.zhangyangyang.proxy.server;
 
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 import com.zhangyangyang.proxy.EncryptException;
+import com.zhangyangyang.proxy.common.InnerProxy;
 import com.zhangyangyang.proxy.common.ResCode;
 import com.zhangyangyang.proxy.common.SocketProxy;
+import com.zhangyangyang.proxy.common.SocketThreadPool;
 import com.zhangyangyang.proxy.data.UserBean;
 import com.zhangyangyang.proxy.data.UserDB;
 import com.zhangyangyang.proxy.util.AES;
@@ -35,21 +38,42 @@ public class SocketProxyImpl extends SocketProxy {
         InputStream inSocketInputStream = inSocket.getInputStream();
         ServerRequestHeader header = buildRequestHeader(inSocketInputStream);
         ServerResponseHeader response = validRequest(header);
-        if (response.isSuccess()) {
-            userBean = UserDB.getUserByName(header.getName());
-        }
         inSocket.getOutputStream().write(response.getStatus());
         inSocket.getOutputStream().flush();
+        if (!response.isSuccess()) {
+            userBean = UserDB.getUserByName(header.getName());
+            inSocket.close();
+            return;
+        }
+
+        outSocket = new Socket(response.getHost(), response.getPort());
         // listen client request
         listenClientRequest(inSocketInputStream);
         // bridge destination server
-
+        SocketThreadPool.submit(new InnerProxy(outSocket.getInputStream(), inSocket.getOutputStream()));
+        inSocket.close();
+        outSocket.close();
     }
 
-    private void listenClientRequest(InputStream in) {
+    private void listenClientRequest(InputStream in) throws IOException {
         int n;
-        byte[] bytes = new byte[2048];
-        // TODO: 2018/4/3
+        try (ByteOutputStream out = new ByteOutputStream()) {
+            while ((n = in.read()) != -1) {
+                if (n == '\n') {
+                    byte[] bytes = out.getBytes();
+                    try {
+                        // decrypt bytes
+                        bytes = AES.decrypt(new String(userBean.getPassword()), bytes);
+                        outSocket.getOutputStream().write(bytes);
+                        outSocket.getOutputStream().flush();
+                    } catch (EncryptException e) {
+                        LOGGER.error("decrypt data block failed, continue...", e);
+                    }
+                } else {
+                    out.write(n);
+                }
+            }
+        }
     }
 
 

@@ -1,6 +1,7 @@
 package com.zhangyangyang.proxy.client;
 
 
+import com.zhangyangyang.proxy.common.InnerProxy;
 import com.zhangyangyang.proxy.common.SocketThreadPool;
 
 import org.apache.logging.log4j.LogManager;
@@ -8,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.net.URL;
 import java.util.Arrays;
@@ -23,13 +23,17 @@ public class SocketProxy implements Runnable {
     private Socket inSocket;
     private Socket outSocket;
     private Request request;
+    private String name;
+    private char[] password;
 
     private static final String AUTHORED = "HTTP/1.1 200 Connection established\r\n\r\n";
 
     private transient boolean run = true;
 
-    SocketProxy(Socket inSocket) {
+    SocketProxy(Socket inSocket, String name, String passwd) {
         this.inSocket = inSocket;
+        this.name = name;
+        this.password = passwd.toCharArray();
     }
 
     private void handle() {
@@ -37,6 +41,7 @@ public class SocketProxy implements Runnable {
         try {
             request = getRequest();
             if (null == request) {
+                LOGGER.error("get request failed");
                 return;
             }
             LOGGER.info("request data:{}", new String(request.getData()));
@@ -46,11 +51,12 @@ public class SocketProxy implements Runnable {
                 inSocket.getOutputStream().write(AUTHORED.getBytes());
                 inSocket.getOutputStream().flush();
             } else {
+                // todo  connect to proxy server ,if success , if failed
                 outSocket.getOutputStream().write(request.getData());
                 outSocket.getOutputStream().flush();
             }
-            InputStream inSocketInputStream = inSocket.getInputStream();
 
+            InputStream inSocketInputStream = inSocket.getInputStream();
             SocketThreadPool.submit(new InnerProxy(outSocket.getInputStream(), inSocket.getOutputStream()));
 
             handleClientRequest(inSocketInputStream);
@@ -87,7 +93,7 @@ public class SocketProxy implements Runnable {
 
     private Request getRequest() throws IOException {
         InputStream in = inSocket.getInputStream();
-        byte[] buf = new byte[1024 * 1024];
+        byte[] buf = new byte[2 << 14];
         int length = in.read(buf);
         if (length < 0) {
             LOGGER.info("no data for the request");
@@ -122,58 +128,6 @@ public class SocketProxy implements Runnable {
 
         temp.setData(Arrays.copyOfRange(buf, 0, length));
         return temp;
-    }
-
-    private class InnerProxy implements Runnable {
-        private InputStream outSocketInputStream;
-        private OutputStream inSocketOutputStream;
-
-        InnerProxy(InputStream outSocketInputStream, OutputStream inSocketOutputStream) {
-            this.outSocketInputStream = outSocketInputStream;
-            this.inSocketOutputStream = inSocketOutputStream;
-        }
-
-        @Override
-        public void run() {
-            byte[] ret = new byte[2048];
-            int inLen;
-
-            while (run) {
-                try {
-                    inLen = outSocketInputStream.read(ret);
-                    if (inLen == -1) {
-                        run = false;
-                        break;
-                    }
-                    inSocketOutputStream.write(ret, 0, inLen);
-                    inSocketOutputStream.flush();
-                } catch (IOException e) {
-                    // if connection reset or remote server close the connection
-                    run = false;
-                    break;
-                }
-            }
-            releaseConnection();
-
-        }
-
-        private void releaseConnection() {
-            try {
-                if (null != request)
-                    LOGGER.info("release connection:{}", request.getMetaInfo());
-
-                if (!inSocket.isClosed()) {
-                    inSocket.close();
-                }
-
-                if (null != outSocket && !outSocket.isClosed()) {
-                    outSocket.close();
-                }
-
-            } catch (Exception e) {
-                LOGGER.error("release connection failed", e);
-            }
-        }
     }
 
 

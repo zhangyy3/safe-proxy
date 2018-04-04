@@ -16,15 +16,19 @@ public class Start {
 
     private static final Logger LOGGER = LogManager.getLogger(Start.class);
 
-    private static boolean run = true;
 
     public static void main(String[] args) throws Exception {
-        try (ServerSocket serverSocket = new ServerSocket(8888)) {
 
-            while (run) {
+        if (args.length != 3) {
+            LOGGER.error("缺少必要参数");
+            return;
+        }
+
+        try (ServerSocket serverSocket = new ServerSocket(Integer.parseInt(args[0]))) {
+            while (!serverSocket.isClosed()) {
                 Socket socket = serverSocket.accept();
                 LOGGER.info("port:{}", socket.getPort());
-                SocketThreadPool.submit(new SocketProxy(socket));
+                SocketThreadPool.submit(new SocketProxy(socket, args[1], args[2]));
             }
         } catch (Exception e) {
             LOGGER.error("start server failed", e);
