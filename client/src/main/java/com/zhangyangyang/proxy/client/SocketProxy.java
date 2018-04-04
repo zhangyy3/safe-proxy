@@ -28,7 +28,7 @@ public class SocketProxy implements Runnable {
 
     private static final String AUTHORED = "HTTP/1.1 200 Connection established\r\n\r\n";
 
-    private transient boolean run = true;
+    private volatile boolean run = true;
 
     SocketProxy(Socket inSocket, String name, String passwd) {
         this.inSocket = inSocket;
