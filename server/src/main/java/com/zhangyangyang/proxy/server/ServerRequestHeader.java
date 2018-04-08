@@ -5,40 +5,50 @@ package com.zhangyangyang.proxy.server;
  * first connect info
  */
 public class ServerRequestHeader {
-    private String name;
-    private String password;
-    private String host;
-    private String port;
 
-    public String getName() {
+    private byte[] name;
+    private byte[] password;
+    private byte[] host;
+    private byte[] port;
+    private byte[] data;
+
+    public byte[] getName() {
         return name;
     }
 
-    public void setName(String name) {
+    public void setName(byte[] name) {
         this.name = name;
     }
 
-    public String getPassword() {
+    public byte[] getPassword() {
         return password;
     }
 
-    public void setPassword(String password) {
+    public void setPassword(byte[] password) {
         this.password = password;
     }
 
-    public String getHost() {
+    public byte[] getHost() {
         return host;
     }
 
-    public void setHost(String host) {
+    public void setHost(byte[] host) {
         this.host = host;
     }
 
-    public String getPort() {
+    public byte[] getPort() {
         return port;
     }
 
-    public void setPort(String port) {
+    public void setPort(byte[] port) {
         this.port = port;
+    }
+
+    public byte[] getData() {
+        return data;
+    }
+
+    public void setData(byte[] data) {
+        this.data = data;
     }
 }

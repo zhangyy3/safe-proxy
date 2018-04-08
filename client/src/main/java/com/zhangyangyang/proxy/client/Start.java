@@ -29,7 +29,7 @@ public class Start {
             while (!serverSocket.isClosed()) {
                 Socket socket = serverSocket.accept();
                 LOGGER.info("port:{}", socket.getPort());
-                SocketThreadPool.submit(new SocketProxy(socket, args[1], MD5.md5(args[2])));
+                SocketThreadPool.submit(new ClientSocketProxy(socket, args[1], MD5.md5(args[2])));
             }
         } catch (Exception e) {
             LOGGER.error("start server failed", e);

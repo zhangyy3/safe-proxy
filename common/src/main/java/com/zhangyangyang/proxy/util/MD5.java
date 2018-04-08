@@ -18,8 +18,8 @@ public class MD5 {
         MessageDigest digest = MessageDigest.getInstance("md5");
         byte[] bytes = digest.digest(str.getBytes("utf8"));
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < bytes.length; i++){
-            int val = ((int) bytes[i]) & 0xff;
+        for (byte aByte : bytes) {
+            int val = ((int) aByte) & 0xff;
             if (val < 16)
                 sb.append("0");
             sb.append(Integer.toHexString(val));
