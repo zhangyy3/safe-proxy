@@ -1,7 +1,9 @@
 package com.zhangyangyang.proxy.util;
 
+import com.zhangyangyang.proxy.EncryptException;
 import com.zhangyangyang.proxy.common.SafeBlockWrapper;
 import com.zhangyangyang.proxy.proto.SafeBlock;
+import com.zhangyangyang.proxy.proto.SafeBlockConst;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -18,7 +20,37 @@ public class SafeBlockParser {
     private static final int CR = '\r';//13
     private static final int LF = '\n';//10
 
+    /**
+     * 创建数据块，用于传到stream 中
+     *
+     * @param password 加密的密钥
+     * @param type     SafeBlock type
+     * @param data     data
+     * @return SafeBlock
+     */
+    public static SafeBlock create(String password, byte[] type, byte[] data) throws EncryptException {
+        SafeBlock block = new SafeBlock();
+        block.setHeader(SafeBlockConst.HEADER_1_BIN);
+        block.setType(type);
+        block.setData(AES.encrypt(password, data));
+        return block;
+    }
 
+    public static String getType(byte[] type) {
+        return new String(type);
+    }
+
+    public static byte[] getDate(byte[] data, String password) throws EncryptException {
+        return AES.decrypt(password, data);
+    }
+
+
+    /**
+     * 从流中读取数据组成safeBlock
+     *
+     * @param in 输入流
+     * @return SafeBlockWrapper
+     */
     public static SafeBlockWrapper parse(InputStream in) throws IOException {
         int state = S_INIT;
         int n;
